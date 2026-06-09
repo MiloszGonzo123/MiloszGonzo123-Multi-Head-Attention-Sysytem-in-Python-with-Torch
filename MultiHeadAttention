@@ -1,0 +1,64 @@
+import torch
+import torch.nn.functional as F
+import math
+
+# Główny silnik, który odpowiada za to, żeby model wiedział, na co patrzeć
+def multi_head_attention(x, w_q, w_k, w_v, n_heads):
+    seq_len, embed_dim = x.size()
+    head_dim = embed_dim // n_heads
+    
+    # Przemielenie danych przez wagi, żeby dostać Q, K i V
+    Q = torch.matmul(x, w_q)
+    K = torch.matmul(x, w_k)
+    V = torch.matmul(x, w_v)
+    
+    # Rozbijamy wszystko na osobne "głowy", żeby każda mogła szukać czegoś innego
+    Q = Q.reshape(seq_len, n_heads, head_dim).transpose(0, 1)
+    K = K.reshape(seq_len, n_heads, head_dim).transpose(0, 1)
+    V = V.reshape(seq_len, n_heads, head_dim).transpose(0, 1)
+    
+    # Wyliczamy wynik uwagi (kto na kogo patrzy) i mnożymy przez wartości
+    scores = torch.matmul(Q, K.transpose(-2, -1)) / math.sqrt(head_dim)
+    weights = F.softmax(scores, dim=-1)
+    output = torch.matmul(weights, V)
+    
+    # Sklejamy głowy z powrotem do kupy w jeden wektor
+    return output.transpose(0, 1).reshape(seq_len, embed_dim)
+
+# Uspokajacz liczb, żeby model nie wywalał błędów przy głębokich warstwach
+def layer_norm(x):
+    mean = x.mean(dim=-1, keepdim=True)
+    std = x.std(dim=-1, keepdim=True)
+    return (x - mean) / (std + 1e-5)
+
+# --- USTAWIENIA ---
+n_layers = 5
+embed_dim = 8
+n_heads = 2
+seq_len = 3
+
+# JEDNA DUŻA TABELA Z WAGAMI 
+Data = {
+    f"warst{i+1}": {
+        "Wq": torch.randn(embed_dim, embed_dim, requires_grad=True),
+        "Wk": torch.randn(embed_dim, embed_dim, requires_grad=True),
+        "Wv": torch.randn(embed_dim, embed_dim, requires_grad=True)
+    }
+    for i in range(n_layers)
+}
+
+# --- PĘTLA PRZELOTU PRZEZ WARSTWY ---
+data = torch.randn(seq_len, embed_dim)
+
+for i in range(1, n_layers + 1):
+    wagi = Data[f"warst{i}"]
+    
+    # Liczymy attention dla danej warstwy
+    output = multi_head_attention(data, wagi["Wq"], wagi["Wk"], wagi["Wv"], n_heads)
+    
+    # Dodajemy oryginalne dane (skrót rezydualny) i normujemy wynik
+    data = layer_norm(data + output)
+    
+    print(f"Warstwa {i} przemielona.")
+
+print("\nGotowy wynik z tabeli:\n", data)
