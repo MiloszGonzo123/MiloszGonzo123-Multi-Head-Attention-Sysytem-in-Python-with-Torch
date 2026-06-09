@@ -24,10 +24,6 @@ Model składa się z 5 warstw, z których każda posiada własne wagi (macierze 
 * Python 3.x
 * PyTorch
 
-## Dlaczego to zbudowałem?
-
-Chciałem sprawdzić, czy „na chłopski rozum” da się ogarnąć coś, co stoi za potęgą współczesnych LLM-ów. Ten projekt nauczył mnie, że cały ten „magiczny” świat sztucznej inteligencji to po prostu bardzo sprytna statystyka i dużo mnożenia macierzy.
-
 ## Jak uruchomić?
 
 1. Sklonuj repozytorium.
